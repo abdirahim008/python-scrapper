@@ -18,7 +18,8 @@ import json
 import os
 import sys
 import time
-from datetime import datetime
+from datetime import datetime, timezone
+from dotenv import load_dotenv  # <-- Add this
 
 from scraper import scrape_somalijobs, SeenTracker
 from enrichment import enrich_description
@@ -28,16 +29,17 @@ try:
 except ImportError:
     os.system(f"{sys.executable} -m pip install requests --break-system-packages -q")
     import requests
-
+# Load environment variables from .env.local BEFORE setting configs
+load_dotenv('.env.local')           # <-- 2. Call it here
 # ==========================================
 # CONFIG (from environment variables)
 # ==========================================
 
 # Your SomKen app URL — set in Railway environment variables
-SOMKEN_URL = os.environ.get('https://somkenjobs.com', '')
-SOMKEN_TOKEN = os.environ.get('SOMKEN_TOKEN', '')  # Static token (optional)
-SOMKEN_EMAIL = os.environ.get('admin@jobconnect.com', '')    # For auto-login
-SOMKEN_PASSWORD = os.environ.get('Sk7@9mQ$nX3!pL8&vB2#wE5*uR4', '')  # For auto-login
+SOMKEN_URL = os.environ.get('SOMKEN_URL', '')
+SOMKEN_TOKEN = os.environ.get('SOMKEN_TOKEN', '')  
+SOMKEN_EMAIL = os.environ.get('SOMKEN_EMAIL', '')    
+SOMKEN_PASSWORD = os.environ.get('SOMKEN_PASSWORD', '')
 BULK_ENDPOINT = '/api/jobs/bulk-upload'
 LOGIN_ENDPOINT = '/api/auth/login'
 
@@ -169,8 +171,8 @@ def step_upload(jobs, dry_run=False):
             'country': job.get('country', 'Somalia'),
             'description': job.get('description', ''),
             'url': job.get('url', ''),
-            'deadline': job.get('deadline') or None,
-            'datePosted': job.get('datePosted') or None,
+            'deadline': job.get('deadline') if '202' in str(job.get('deadline')) else None,
+            'datePosted': datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z'),
             'sector': job.get('sector') or None,
             'source': job.get('source', 'somalijobs'),
             'type': 'tender' if 'tender' in (job.get('type') or '').lower() else 'job',
